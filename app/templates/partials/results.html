@@ -1,0 +1,206 @@
+{# Server-rendered results. The JS renderer produces the same blocks for the SPA path;
+   this copy is what a no-JS visitor and the print stylesheet see (§7.9). #}
+{% set breakdown = analysis.score_breakdown or {} %}
+{% set counts = breakdown.get('counts', {}) %}
+{% set rows = breakdown.get('rows', []) %}
+{% set total_hours = weeks | sum(attribute='hours') if weeks else 0 %}
+
+<header class="sm-result-head">
+  <div class="sm-result-head__text">
+    <p class="sm-eyebrow">Analysis · <span class="sm-status sm-status--{{ analysis.status }}">{{ status_labels.get(analysis.status, analysis.status) }}</span></p>
+    <h1>{{ analysis.role_label }}</h1>
+    <p class="sm-subtitle">
+      {% if analysis.jd_company %}{{ analysis.jd_company }} <span aria-hidden="true">·</span> {% endif %}
+      <time datetime="{{ analysis.created_at }}">{{ analysis.created_at | short_date }}</time>
+      {% if analysis.resume_filename %} <span aria-hidden="true">·</span> {{ analysis.resume_filename }}{% endif %}
+    </p>
+  </div>
+</header>
+
+{% if analysis.error_code and analysis.status == 'failed' %}
+  <div class="sm-banner sm-banner--error" role="alert">
+    <strong>This analysis didn’t finish.</strong>
+    <p>{{ analysis.error_message or 'Something went wrong while analyzing your resume.' }}</p>
+  </div>
+{% endif %}
+
+{% if analysis.status in ('queued', 'running') %}
+  <div class="sm-banner sm-banner--info" role="status">
+    <p><a href="/api/analyses/{{ analysis.id }}">This analysis is still running.</a> Reload this page in a few seconds to see the result.</p>
+  </div>
+{% endif %}
+
+{% if analysis.match_score is not none %}
+  {% set coverage = breakdown.get('coverage', 0) %}
+  <section class="sm-kpi-grid" aria-label="Match at a glance">
+    <article class="sm-stat sm-stat--hero">
+      <p class="sm-stat__label">Match score</p>
+      <p class="sm-stat__value">{{ analysis.match_score }}<span class="sm-stat__unit">/100</span></p>
+      <p class="sm-stat__meta">{{ analysis.match_band | band_label }}</p>
+    </article>
+    <article class="sm-stat">
+      <p class="sm-stat__label">Skills matched</p>
+      <p class="sm-stat__value">{{ counts.get('matched', 0) }}<span class="sm-stat__unit">/ {{ rows | length }}</span></p>
+      <p class="sm-stat__meta">{{ counts.get('partial', 0) }} partial · {{ counts.get('missing', 0) }} missing</p>
+    </article>
+    <article class="sm-stat">
+      <p class="sm-stat__label">Open gaps</p>
+      <p class="sm-stat__value">{{ gaps | length }}</p>
+      <p class="sm-stat__meta">Prioritised by impact</p>
+    </article>
+    <article class="sm-stat">
+      <p class="sm-stat__label">Hours to close</p>
+      <p class="sm-stat__value">{{ gaps | sum(attribute='estimated_hours') if gaps else 0 }}<span class="sm-stat__unit">h</span></p>
+      <p class="sm-stat__meta">Estimated from the gap list</p>
+    </article>
+  </section>
+
+  <div class="sm-grid-2 sm-grid-2--wide">
+    <section class="sm-card sm-score-card sm-score-card--{{ analysis.match_band }}" aria-labelledby="score-heading">
+      <div class="sm-score-card__top">
+        <div class="sm-score-card__value">
+          <span class="sm-score-card__number">{{ analysis.match_score }}</span>
+          <span class="sm-score-card__outof">/ 100</span>
+        </div>
+        <div>
+          <h2 id="score-heading">{{ analysis.match_band | band_label }}</h2>
+          <p class="sm-muted">Weighted coverage of the skills this job asks for.</p>
+        </div>
+      </div>
+      <div class="sm-meter-block">
+        <div class="sm-meter-block__head"><span>Requirement coverage</span><strong>{{ coverage | percent }}</strong></div>
+        <progress class="sm-meter" max="100" value="{{ (coverage * 100) | round | int }}" aria-label="Requirement coverage {{ coverage | percent }}">{{ coverage | percent }}</progress>
+      </div>
+      <dl class="sm-stat-row">
+        <div class="sm-stat"><dt>Matched</dt><dd>{{ counts.get('matched', 0) }}</dd></div>
+        <div class="sm-stat"><dt>Partial</dt><dd>{{ counts.get('partial', 0) }}</dd></div>
+        <div class="sm-stat"><dt>Missing</dt><dd>{{ counts.get('missing', 0) }}</dd></div>
+      </dl>
+    </section>
+
+    <section class="sm-card" aria-labelledby="skills-heading">
+      <div class="sm-card__head">
+        <div>
+          <h2 id="skills-heading">Skill match</h2>
+          <p class="sm-card__sub">How strongly your resume covers each skill the job asks for.</p>
+        </div>
+      </div>
+      <ul class="sm-skill-list">
+        {% for row in rows | sort(attribute='strength', reverse=true) %}
+          <li class="sm-skill-row">
+            <span class="sm-skill-row__name">
+              <span class="sm-dot sm-dot--{{ row.status }}" aria-hidden="true"></span>
+              {{ row.display_name }}
+              <span class="sm-skill-row__importance">{{ importance_labels.get(row.importance, row.importance) }}</span>
+            </span>
+            <span class="sm-skill-row__meter">
+              <progress class="sm-meter sm-meter--slim" max="100" value="{{ (row.strength * 100) | round | int }}" aria-label="{{ row.display_name }} strength {{ row.strength | percent }}">{{ row.strength | percent }}</progress>
+              <span class="sm-skill-row__value">{{ row.strength | percent }}</span>
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="sm-legend">
+        <span><span class="sm-dot sm-dot--matched" aria-hidden="true"></span>Matched</span>
+        <span><span class="sm-dot sm-dot--partial" aria-hidden="true"></span>Partial</span>
+        <span><span class="sm-dot sm-dot--missing" aria-hidden="true"></span>Missing</span>
+      </p>
+    </section>
+  </div>
+{% endif %}
+
+{% if gaps %}
+  <section class="sm-section" aria-labelledby="gaps-heading">
+    <div class="sm-section-head">
+      <div>
+        <h2 id="gaps-heading">Skill gaps</h2>
+        <p class="sm-card__sub">Ordered by impact: the higher the bar, the more closing it raises your score.</p>
+      </div>
+      <span class="sm-badge sm-badge--ghost">{{ gaps | length }} to close</span>
+    </div>
+    <ol class="sm-gap-list">
+      {% for gap in gaps %}
+        <li class="sm-gap sm-gap--{{ gap.priority.value }}">
+          <div class="sm-gap__head">
+            <span class="sm-badge sm-badge--{{ gap.priority.value }}">{{ priority_labels.get(gap.priority.value, gap.priority.value) }}</span>
+            <h3>{{ gap.display_name }}</h3>
+            <span class="sm-badge sm-badge--ghost">{{ importance_labels.get(gap.jd_importance.value, gap.jd_importance.value) }}</span>
+          </div>
+          <p class="sm-gap__reason">{{ gap.gap_reason }}</p>
+          <dl class="sm-gap__stats">
+            <div><dt>Score impact</dt><dd>+{{ (gap.impact * 100) | round | int }} pts</dd></div>
+            <div><dt>Time to close</dt><dd>{{ gap.estimated_hours }}h</dd></div>
+            <div><dt>Your strength</dt><dd>{{ gap.resume_strength | percent }}</dd></div>
+            <div><dt>Category</dt><dd>{{ gap.category | humanize }}</dd></div>
+          </dl>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+{% elif analysis.match_score is not none %}
+  <div class="sm-banner sm-banner--success" role="status">
+    <p>No gaps found — your resume already covers every skill this job asks for.</p>
+  </div>
+{% endif %}
+
+{% if weeks %}
+  <section class="sm-section" aria-labelledby="roadmap-heading">
+    <div class="sm-section-head">
+      <div>
+        <h2 id="roadmap-heading">Your {{ weeks | length }}-week learning roadmap</h2>
+        <p class="sm-card__sub">Built from your gap list — {{ analysis.hours_per_week }} hours per week{% if roadmap_generated_at %} · generated {{ roadmap_generated_at | short_date }}{% endif %}.</p>
+      </div>
+      <span class="sm-badge sm-badge--ghost">{{ total_hours }}h total</span>
+    </div>
+    <ol class="sm-week-list">
+      {% for week in weeks %}
+        <li class="sm-week">
+          <div class="sm-week__marker" aria-hidden="true">{{ week.week_number }}</div>
+          <div class="sm-week__body">
+            <div class="sm-week__head">
+              <span class="sm-week__number">Week {{ week.week_number }}</span>
+              <h3>{{ week.theme }}</h3>
+              <span class="sm-badge sm-badge--ghost">{{ week.hours }}h</span>
+            </div>
+            <p class="sm-week__objective">{{ week.objective }}</p>
+            {% if week.focus_skills %}
+              <p class="sm-tags">
+                {% for skill in week.focus_skills %}<span class="sm-tag">{{ skill }}</span>{% endfor %}
+              </p>
+            {% endif %}
+            <ul class="sm-task-list">
+              {% for item in week.items %}
+                <li class="sm-task">
+                  <div class="sm-task__head">
+                    <span class="sm-task__type sm-task__type--{{ item.type.value }}">{{ item.type.value }}</span>
+                    <h4>{{ item.title }}</h4>
+                    <span class="sm-muted sm-task__time">{{ item.est_minutes | minutes }}</span>
+                  </div>
+                  {% if item.details %}<p class="sm-task__details">{{ item.details }}</p>{% endif %}
+                  {% if item.resources %}
+                    <ul class="sm-resource-list">
+                      {% for resource in item.resources %}
+                        <li>
+                          {% if resource.url %}
+                            <a href="{{ resource.url }}" target="_blank" rel="noopener noreferrer">{{ resource.label }}</a>
+                          {% else %}
+                            <span>{{ resource.label }}</span>
+                          {% endif %}
+                          <span class="sm-muted">{{ resource.provider }}{% if resource.free %} · free{% endif %}</span>
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  {% endif %}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  </section>
+{% endif %}
+
+<p class="sm-muted sm-fineprint">
+  Scored with {{ score_formula }}. Generated with prompt {{ analysis.prompt_version }}{% if analysis.model_extract %} · {{ analysis.model_extract }}{% endif %}{% if analysis.model_roadmap %} / {{ analysis.model_roadmap }}{% endif %}.
+</p>

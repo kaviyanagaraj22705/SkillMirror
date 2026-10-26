@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block crumbs %}<a href="/">Dashboard</a><span aria-hidden="true">/</span><span>How it works</span>{% endblock %}
+
+{% block content %}
+<section class="sm-page">
+<header class="sm-page-head">
+  <div>
+    <p class="sm-eyebrow">Reference</p>
+    <h1>How SkillMirror works</h1>
+    <p class="sm-subtitle">What it reads, how it scores you, and where your data goes.</p>
+  </div>
+</header>
+
+<article class="sm-prose">
+  <h2 id="steps">The four steps</h2>
+  <ol>
+    <li><strong>Read your resume.</strong> If you upload a PDF or DOCX, the text is extracted locally. If you paste, we use it as-is.</li>
+    <li><strong>Read the job description.</strong> We pull out the skills it asks for and how strongly it asks for each one: required, preferred, or mentioned.</li>
+    <li><strong>Match and score.</strong> Your resume skills and the job skills are normalized against a dictionary of
+      canonical skills and their aliases, then weighted into a single score.</li>
+    <li><strong>Build the roadmap.</strong> The biggest gaps are turned into a week-by-week plan sized to the hours you have.</li>
+  </ol>
+
+  <h2 id="scoring">How the score works</h2>
+  <p>
+    Each skill the job asks for gets a weight from its importance: required, preferred, or mentioned.
+    Your resume then gets a strength from 0 to 1 for that skill — full credit if you have it,
+    partial credit if you have an adjacent skill, zero if you don't. The score is the weighted average, scaled to 100.
+  </p>
+  <pre class="sm-formula">{{ score_formula }}</pre>
+  <table class="sm-table sm-table--compact">
+    <caption>Score bands</caption>
+    <thead><tr><th scope="col">Band</th><th scope="col" class="sm-table__num">Score</th><th scope="col">What it means</th></tr></thead>
+    <tbody>
+      {% for band in meta.bands %}
+        <tr>
+          <th scope="row">{{ band.label }}</th>
+          <td class="sm-table__num">{{ band.min_score }}+</td>
+          <td>
+            {% if band.name == 'strong' %}You cover the core requirements. Apply with confidence.
+            {% elif band.name == 'competitive' %}Most core skills are there; a couple of gaps could decide it.
+            {% elif band.name == 'stretch' %}Real gaps against the core requirements — worth applying if you can close them.
+            {% else %}The fundamentals are missing. Treat this as a target to grow into.{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2 id="formats">Resume formats</h2>
+  <ul>
+    <li><strong>PDF</strong> — works when the file has a text layer. Scanned image PDFs cannot be read; paste the text instead.</li>
+    <li><strong>DOCX</strong> — body paragraphs and tables are read. Text inside headers, footers, and text boxes is not.</li>
+    <li><strong>Paste</strong> — the most reliable option, and the one that never leaves anything on disk.</li>
+  </ul>
+
+  <h2 id="privacy">Your data</h2>
+  <p>
+    SkillMirror runs on your machine and has no login. Your resume and the job description are stored in a local
+    SQLite database (<code>{{ settings.DATABASE_PATH.name }}</code>) so you can reopen an analysis later. Uploaded files are
+    parsed in memory and discarded unless <code>KEEP_UPLOADS=true</code> is set.
+  </p>
+  {% if settings.llm_available %}
+    <p>
+      Text is sent to OpenRouter for skill extraction and roadmap generation, under the model slug configured for this
+      install. Request bodies are not logged: prompt and document text stay out of the log files.
+    </p>
+  {% else %}
+    <div class="sm-banner sm-banner--info" role="status">
+      <p><strong>No OpenRouter key is configured.</strong> Analyses run in degraded mode: skills are found by keyword
+        search only, and no roadmap is generated. Set <code>OPENROUTER_API_KEY</code> in <code>.env</code> and restart to
+        enable the full pipeline.</p>
+    </div>
+  {% endif %}
+  <p>Delete an analysis from the <a href="/history">History</a> page to remove it and its roadmap from the database.</p>
+
+  <h2 id="troubleshooting">Troubleshooting</h2>
+  <dl class="sm-faq">
+    <dt>“That PDF has no text to read.”</dt>
+    <dd>The file is a scan or an image export. Open it in a viewer, copy the text, and paste it into Step 1.</dd>
+    <dt>“I couldn't find any skills in that job description.”</dt>
+    <dd>Paste the full posting — the requirements section, not just the title. Very short descriptions rarely name enough skills to score.</dd>
+    <dt>The roadmap failed but the score is there.</dt>
+    <dd>Scoring is deterministic and local; the roadmap needs the LLM. Use <em>Regenerate roadmap</em> on the results page to retry just that stage.</dd>
+    <dt>The score looks too low.</dt>
+    <dd>Check the resume text for missing sections — a table of skills inside a header or text box is a common cause.</dd>
+    <dt>“Rate limit reached.”</dt>
+    <dd>Analyses are capped per hour to protect against accidental double-submits. Wait for the window to roll over.</dd>
+  </dl>
+
+  <h2 id="api">API</h2>
+  <p>The same functionality is available over HTTP. Interactive docs live at <a href="/api/docs">/api/docs</a>.</p>
+</article>
+</section>
+{% endblock %}

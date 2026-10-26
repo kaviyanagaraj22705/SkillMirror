@@ -1,0 +1,107 @@
+<form id="analysis-form" class="sm-form" method="post" action="/api/analyses/form" enctype="multipart/form-data" novalidate>
+  <section class="sm-card" aria-labelledby="resume-step">
+    <div class="sm-step-head">
+      <span class="sm-step-num" aria-hidden="true">1</span>
+      <div>
+        <h2 id="resume-step">Your resume</h2>
+        <p class="sm-card__sub">Paste the text or upload a PDF/DOCX. Parsing happens on this machine.</p>
+      </div>
+    </div>
+
+    <div class="sm-tabs" role="tablist" aria-labelledby="resume-step" id="resume-tabs">
+      <button type="button" class="sm-tab is-selected" role="tab" id="tab-paste" aria-selected="true" aria-controls="panel-paste" data-panel="paste">Paste text</button>
+      <button type="button" class="sm-tab" role="tab" id="tab-upload" aria-selected="false" aria-controls="panel-upload" tabindex="-1" data-panel="upload">Upload PDF or DOCX</button>
+    </div>
+
+    <div id="panel-paste" role="tabpanel" aria-labelledby="tab-paste">
+      <label class="sm-label" for="resume_text">Resume text</label>
+      <textarea id="resume_text" name="resume_text" class="sm-textarea" rows="10"
+                aria-describedby="resume-hint resume-error" placeholder="Paste your resume here — experience, projects, and skills."></textarea>
+      <div class="sm-field-foot">
+        <span id="resume-hint" class="sm-hint" aria-live="polite">0 characters · minimum {{ settings.MIN_TEXT_CHARS }}</span>
+        <button type="button" class="sm-button sm-button--ghost sm-button--small" data-clear="resume_text">Clear</button>
+      </div>
+      <p id="resume-error" class="sm-error" role="alert" hidden></p>
+    </div>
+
+    <div id="panel-upload" role="tabpanel" aria-labelledby="tab-upload" hidden>
+      <input type="file" id="resume_file" name="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" class="sm-visually-hidden">
+      <label for="resume_file" class="sm-dropzone" id="dropzone">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M5 20h14"/></svg>
+        <span class="sm-dropzone__title">Choose a PDF or DOCX, or drop it here</span>
+        <span class="sm-dropzone__hint">Up to {{ settings.MAX_UPLOAD_MB }} MB. Scanned PDFs have no text layer — paste instead.</span>
+      </label>
+      <p id="file-chip" class="sm-chip" hidden></p>
+      <p id="file-error" class="sm-error" role="alert" hidden></p>
+    </div>
+
+    <p class="sm-privacy">
+      <span aria-hidden="true">ⓘ</span>
+      Your resume is sent to OpenRouter for analysis and stored locally on this machine.
+    </p>
+  </section>
+
+  <section class="sm-card" aria-labelledby="job-step">
+    <div class="sm-step-head">
+      <span class="sm-step-num" aria-hidden="true">2</span>
+      <div>
+        <h2 id="job-step">The job</h2>
+        <p class="sm-card__sub">Paste the full posting — requirements and responsibilities both count.</p>
+      </div>
+    </div>
+    <div class="sm-grid-2">
+      <div>
+        <label class="sm-label" for="jd_title">Role title <span class="sm-muted">(optional)</span></label>
+        <input class="sm-input" id="jd_title" name="jd_title" maxlength="200" placeholder="Senior Backend Engineer">
+      </div>
+      <div>
+        <label class="sm-label" for="jd_company">Company <span class="sm-muted">(optional)</span></label>
+        <input class="sm-input" id="jd_company" name="jd_company" maxlength="200" placeholder="Acme Payments">
+      </div>
+    </div>
+    <label class="sm-label" for="jd_text">Job description</label>
+    <textarea id="jd_text" name="jd_text" class="sm-textarea" rows="10" aria-required="true"
+              aria-describedby="jd-hint jd-error" placeholder="Paste the full job posting, including responsibilities and requirements."></textarea>
+    <div class="sm-field-foot">
+      <span id="jd-hint" class="sm-hint" aria-live="polite">0 characters · minimum {{ settings.MIN_TEXT_CHARS }}</span>
+      <button type="button" class="sm-button sm-button--ghost sm-button--small" data-clear="jd_text">Clear</button>
+    </div>
+    <p id="jd-error" class="sm-error" role="alert" hidden></p>
+  </section>
+
+  <section class="sm-card" aria-labelledby="plan-step">
+    <div class="sm-step-head">
+      <span class="sm-step-num" aria-hidden="true">3</span>
+      <div>
+        <h2 id="plan-step">Learning plan</h2>
+        <p class="sm-card__sub">The roadmap is sized to the time you actually have.</p>
+      </div>
+    </div>
+    <div class="sm-grid-2">
+      <div>
+        <label class="sm-label" for="roadmap_weeks">Weeks</label>
+        <select class="sm-select" id="roadmap_weeks" name="roadmap_weeks">
+          {% for weeks in range(2, 13) %}
+            <option value="{{ weeks }}" {% if weeks == settings.ROADMAP_DEFAULT_WEEKS %}selected{% endif %}>{{ weeks }} weeks</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="sm-label" for="hours_per_week">Hours per week</label>
+        <select class="sm-select" id="hours_per_week" name="hours_per_week">
+          {% for hours in [1, 2, 4, 6, 8, 10, 12, 15, 20, 30, 40] %}
+            <option value="{{ hours }}" {% if hours == settings.ROADMAP_DEFAULT_HOURS_PER_WEEK %}selected{% endif %}>{{ hours }} h / week</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <div class="sm-submit-row">
+    <p id="form-error" class="sm-error" role="alert" hidden></p>
+    <button type="submit" class="sm-button sm-button--primary sm-button--large" id="submit-button">
+      Analyze my fit
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+    </button>
+  </div>
+</form>

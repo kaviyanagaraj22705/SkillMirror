@@ -1,0 +1,27 @@
+<header class="sm-page-head">
+  <div>
+    <p class="sm-eyebrow">Analysis in progress</p>
+    <h1 id="progress-title" tabindex="-1">Reading your fit…</h1>
+    <p class="sm-subtitle" id="progress-subtitle">Skills are extracted from both documents, matched against a 179-entry dictionary, and scored.</p>
+  </div>
+</header>
+
+<section class="sm-card sm-progress-card">
+  <div class="sm-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-labelledby="progress-title" id="progress-bar">
+    <div class="sm-progress__fill" id="progress-fill"></div>
+  </div>
+  <p class="sm-progress__value" id="progress-value" aria-hidden="true">0%</p>
+
+  <ol class="sm-stages" id="stage-list" aria-live="polite">
+    <li class="sm-stage" data-stage="extract_resume"><span class="sm-stage__dot"></span><span class="sm-stage__label">Reading your resume</span></li>
+    <li class="sm-stage" data-stage="extract_jd"><span class="sm-stage__dot"></span><span class="sm-stage__label">Reading the job description</span></li>
+    <li class="sm-stage" data-stage="score"><span class="sm-stage__dot"></span><span class="sm-stage__label">Matching skills and scoring</span></li>
+    <li class="sm-stage" data-stage="generate_roadmap"><span class="sm-stage__dot"></span><span class="sm-stage__label">Building your learning roadmap</span></li>
+  </ol>
+</section>
+
+<p class="sm-muted sm-center">This usually takes 20–45 seconds. You can leave this page — the analysis keeps running.</p>
+<div class="sm-actions sm-actions--center">
+  <button type="button" class="sm-button sm-button--secondary" id="background-button">Run in background</button>
+  <button type="button" class="sm-button sm-button--ghost" id="cancel-button" hidden>Cancel</button>
+</div>

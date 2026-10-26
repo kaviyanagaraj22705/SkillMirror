@@ -1,0 +1,25 @@
+# ── Python ───────────────────────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ── Local data (resumes, DB, uploads) ────────────────────────────────────────
+data/
+*.db
+*.db-wal
+*.db-shm
+.env
+
+# ── Editors / OS ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Test artefacts ───────────────────────────────────────────────────────────
+.coverage
+htmlcov/

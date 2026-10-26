@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title | default("SkillMirror") }}{% endblock %}</title>
+  <meta name="description" content="Match your resume to a job description, see the skill gaps, and get a week-by-week learning roadmap.">
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body
+  data-page="{{ active_page | default('') }}"
+  data-max-upload-mb="{{ settings.MAX_UPLOAD_MB }}"
+  data-max-resume-chars="{{ settings.MAX_RESUME_CHARS }}"
+  data-max-jd-chars="{{ settings.MAX_JD_CHARS }}"
+  data-min-chars="{{ settings.MIN_TEXT_CHARS }}"
+  data-roadmap-weeks="{{ settings.ROADMAP_DEFAULT_WEEKS }}"
+  data-hours-per-week="{{ settings.ROADMAP_DEFAULT_HOURS_PER_WEEK }}"
+  data-llm-enabled="{{ 'true' if settings.llm_available else 'false' }}"
+>
+  <a class="sm-skip-link" href="#main">Skip to main content</a>
+
+  <div class="sm-shell">
+    <div class="sm-scrim" id="nav-scrim" hidden></div>
+
+    <aside class="sm-sidebar" id="sidebar" aria-label="Primary navigation">
+      <div class="sm-sidebar__head">
+        <a class="sm-brand" href="/">
+          <img src="/static/img/mark.svg" alt="" width="34" height="34" class="sm-brand__mark">
+          <span class="sm-brand__text">
+            <span class="sm-brand__name">SkillMirror</span>
+            <span class="sm-brand__tag">Resume ↔ role fit</span>
+          </span>
+        </a>
+        <button type="button" class="sm-icon-button sm-sidebar__close" id="nav-close" aria-label="Close navigation">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <nav class="sm-nav" aria-label="Main">
+        <p class="sm-nav__label">Workspace</p>
+        <a class="sm-nav__link{% if active_page == 'dashboard' %} is-active{% endif %}" href="/"
+           {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>
+          <span>Dashboard</span>
+        </a>
+        <a class="sm-nav__link{% if active_page == 'history' %} is-active{% endif %}" href="/history"
+           {% if active_page == 'history' %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>Analysis history</span>
+        </a>
+
+        <p class="sm-nav__label">Reference</p>
+        <a class="sm-nav__link{% if active_page == 'help' %} is-active{% endif %}" href="/help"
+           {% if active_page == 'help' %}aria-current="page"{% endif %}>
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.6.3-.9.8-.9 1.4v.3"/><path d="M12 17h.01"/></svg>
+          <span>How it works</span>
+        </a>
+        <a class="sm-nav__link" href="/api/docs" rel="noopener">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 6-5 6 5 6M16 6l5 6-5 6M14 4l-4 16"/></svg>
+          <span>API reference</span>
+        </a>
+      </nav>
+
+      <div class="sm-sidebar__spacer"></div>
+
+      <div class="sm-sidebar__foot">
+        <div class="sm-mode" title="{% if settings.llm_available %}Skill extraction and roadmaps use {{ settings.OPENROUTER_MODEL_EXTRACT }} via OpenRouter.{% else %}No OpenRouter key configured — analyses run in keyword-only degraded mode.{% endif %}">
+          <span class="sm-mode__dot{% if settings.llm_available %} is-on{% endif %}" aria-hidden="true"></span>
+          <span class="sm-mode__text">
+            <strong>{% if settings.llm_available %}AI analysis on{% else %}Keyword mode{% endif %}</strong>
+            <span>{% if settings.llm_available %}{{ settings.OPENROUTER_MODEL_EXTRACT }}{% else %}Add a key in .env{% endif %}</span>
+          </span>
+        </div>
+        <p class="sm-sidebar__note">
+          <span>Local only · v{{ settings.APP_VERSION }}</span>
+          <a href="/help#privacy">Privacy</a>
+        </p>
+      </div>
+    </aside>
+
+    <div class="sm-main">
+      <header class="sm-topbar">
+        <div class="sm-topbar__inner">
+          <button type="button" class="sm-icon-button sm-menu-button" id="nav-toggle"
+                  aria-controls="sidebar" aria-expanded="false" aria-label="Open navigation">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+          </button>
+          <p class="sm-crumbs">{% block crumbs %}<a href="/">Dashboard</a><span aria-hidden="true">/</span><span>{{ page_title | default('SkillMirror') }}</span>{% endblock %}</p>
+          <div class="sm-topbar__actions">
+            <a class="sm-button sm-button--ghost sm-button--small" href="/history">History</a>
+            <a class="sm-button sm-button--primary sm-button--small" href="/">New analysis</a>
+          </div>
+        </div>
+      </header>
+
+      <main id="main" class="sm-content" tabindex="-1">
+        {% block content %}{% endblock %}
+
+        <footer class="sm-footer">
+          <p>Runs locally. Resume and job text are stored in a local SQLite database and sent to OpenRouter during analysis.</p>
+          <p class="sm-footer__meta">SkillMirror {{ settings.APP_VERSION }} · <a href="/help">How it works</a></p>
+        </footer>
+      </main>
+    </div>
+  </div>
+
+  <div id="toasts" class="sm-toasts" aria-live="polite" aria-atomic="false"></div>
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

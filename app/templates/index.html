@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block crumbs %}<a href="/">Dashboard</a><span aria-hidden="true">/</span>{% if analysis %}<a href="/history">History</a><span aria-hidden="true">/</span><span>{{ analysis.role_label }}</span>{% else %}<span>New analysis</span>{% endif %}{% endblock %}
+
+{% block content %}
+<section id="input-screen" class="sm-page"{% if analysis %} hidden{% endif %}>
+  <header class="sm-page-head">
+    <div>
+      <p class="sm-eyebrow">Overview</p>
+      <h1 id="page-title">See how you fit before you apply.</h1>
+      <p class="sm-subtitle">Run a resume against a job description to get a skill-level match score, a prioritized gap list, and a week-by-week plan to close it.</p>
+    </div>
+    {% if summary.span_label %}
+      <p class="sm-page-head__note" data-summary="note">{{ summary.window }} analyses · {{ summary.span_label }}</p>
+    {% else %}
+      <p class="sm-page-head__note" data-summary="note" hidden></p>
+    {% endif %}
+  </header>
+
+  {% if error %}
+    <div class="sm-banner sm-banner--error" role="alert">
+      <p>{{ error }}</p>
+      <p><a href="/">Start a new analysis</a></p>
+    </div>
+  {% endif %}
+
+  <section class="sm-kpi-grid" aria-label="Analysis summary">
+    <article class="sm-stat">
+      <p class="sm-stat__label">Analyses run</p>
+      <p class="sm-stat__value" data-summary="total">{{ summary.total }}</p>
+      <p class="sm-stat__meta" data-summary="span">{% if summary.span_label %}{{ summary.span_label }}{% else %}No analyses yet{% endif %}</p>
+    </article>
+    <article class="sm-stat">
+      <p class="sm-stat__label">Average match</p>
+      <p class="sm-stat__value" data-summary="average">{% if summary.average_score is not none %}{{ summary.average_score }}<span class="sm-stat__unit">/100</span>{% else %}—{% endif %}</p>
+      <p class="sm-stat__meta" data-summary="scored">{{ summary.scored }} scored in this view</p>
+    </article>
+    <article class="sm-stat">
+      <p class="sm-stat__label">Best match</p>
+      <p class="sm-stat__value" data-summary="best">{% if summary.best_score is not none %}{{ summary.best_score }}<span class="sm-stat__unit">/100</span>{% else %}—{% endif %}</p>
+      <p class="sm-stat__meta">Your strongest result</p>
+    </article>
+    <article class="sm-stat">
+      <p class="sm-stat__label">Open skill gaps</p>
+      <p class="sm-stat__value" data-summary="gaps">{{ summary.open_gaps }}</p>
+      <p class="sm-stat__meta" data-summary="gaps-meta">Across the {{ summary.window }} most recent</p>
+    </article>
+  </section>
+
+  <div class="sm-dashboard-grid">
+    <div class="sm-column">
+      {% include "partials/input_form.html" %}
+    </div>
+
+    <aside class="sm-column sm-column--side" aria-label="Recent activity">
+      <section class="sm-card" id="trend-card" hidden aria-labelledby="trend-heading">
+        <div class="sm-card__head">
+          <div>
+            <h2 id="trend-heading">Match score trend</h2>
+            <p class="sm-card__sub">Every scored analysis, oldest to newest.</p>
+          </div>
+        </div>
+        <div id="trend-root"></div>
+      </section>
+
+      <section class="sm-card" aria-labelledby="recent-heading">
+        <div class="sm-card__head">
+          <div>
+            <h2 id="recent-heading">Recent analyses</h2>
+            <p class="sm-card__sub">Open one to see its gaps and roadmap.</p>
+          </div>
+          <a class="sm-link" href="/history">View all</a>
+        </div>
+
+        <div id="recent-root">
+          {% if recent %}
+            <ul class="sm-analysis-list" id="recent-list">
+              {% for item in recent %}
+                <li class="sm-analysis-card">
+                  <a class="sm-analysis-card__link" href="/?analysis={{ item.record.id }}">
+                    <span class="sm-analysis-card__top">
+                      <span class="sm-status sm-status--{{ item.record.status }}">{{ status_labels.get(item.record.status, item.record.status) }}</span>
+                      <time class="sm-muted" datetime="{{ item.record.created_at }}">{{ item.record.created_at | short_date }}</time>
+                    </span>
+                    <span class="sm-analysis-card__title">{{ item.record.role_label }}</span>
+                    <span class="sm-analysis-card__company">{{ item.record.jd_company or 'No company given' }}</span>
+                    <span class="sm-analysis-card__foot">
+                      {% if item.record.match_score is not none %}
+                        <span class="sm-score-chip{% if item.record.match_band %} sm-score-chip--{{ item.record.match_band }}{% endif %}">{{ item.record.match_score }}</span>
+                        <span class="sm-analysis-card__band">{{ item.band_label }}</span>
+                      {% else %}
+                        <span class="sm-badge sm-badge--ghost">Not scored</span>
+                      {% endif %}
+                      <span class="sm-analysis-card__gaps">{{ item.gap_count }} gap{{ '' if item.gap_count == 1 else 's' }}</span>
+                    </span>
+                  </a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="sm-empty sm-empty--compact">
+              <p class="sm-empty__title">No analyses yet</p>
+              <p class="sm-muted">Your first result will appear here with its score and gaps.</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="sm-card sm-inset" aria-labelledby="scoring-heading">
+        <h2 id="scoring-heading">How the score works</h2>
+        <p class="sm-card__sub">A deterministic weighted average — the same inputs always produce the same number.</p>
+        <dl class="sm-mini-list">
+          <div><dt>Required skills</dt><dd>weight 3</dd></div>
+          <div><dt>Preferred</dt><dd>weight 2</dd></div>
+          <div><dt>Mentioned</dt><dd>weight 1</dd></div>
+        </dl>
+        <p class="sm-fineprint sm-muted">Your strength counts as full when matched, partial for adjacency or name-only mentions. <a href="/help">Read the formula</a></p>
+      </section>
+    </aside>
+  </div>
+</section>
+
+<section id="analyzing-screen" class="sm-page sm-page--narrow" hidden>
+  {% include "partials/progress.html" %}
+</section>
+
+<section id="results-screen" class="sm-page" hidden>
+  <div id="results-root" class="sm-stack"></div>
+</section>
+
+<section id="error-screen" class="sm-page sm-page--narrow" hidden>
+  <div id="error-root"></div>
+</section>
+
+{% if analysis %}
+  <section id="server-results" class="sm-page sm-server-results">
+    {% include "partials/results.html" %}
+  </section>
+{% endif %}
+{% endblock %}

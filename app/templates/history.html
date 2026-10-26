@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block crumbs %}<a href="/">Dashboard</a><span aria-hidden="true">/</span><span>Analysis history</span>{% endblock %}
+
+{% block content %}
+<section class="sm-page">
+  <header class="sm-page-head">
+    <div>
+      <p class="sm-eyebrow">Workspace</p>
+      <h1>Analysis history</h1>
+      <p class="sm-subtitle">Every analysis run on this machine, newest first. Open one to revisit its gaps and roadmap.</p>
+    </div>
+    <a class="sm-button sm-button--primary" href="/">New analysis</a>
+  </header>
+
+  {% if items %}
+    <section class="sm-kpi-grid" aria-label="History summary">
+      <article class="sm-stat">
+        <p class="sm-stat__label">Analyses stored</p>
+        <p class="sm-stat__value">{{ history_stats.count }}</p>
+        <p class="sm-stat__meta">Local SQLite</p>
+      </article>
+      <article class="sm-stat">
+        <p class="sm-stat__label">Average match</p>
+        <p class="sm-stat__value">{% if history_stats.average_score is not none %}{{ history_stats.average_score }}<span class="sm-stat__unit">/100</span>{% else %}—{% endif %}</p>
+        <p class="sm-stat__meta">{{ history_stats.scored }} scored recently</p>
+      </article>
+      <article class="sm-stat">
+        <p class="sm-stat__label">Open gaps</p>
+        <p class="sm-stat__value">{{ history_stats.open_gaps }}</p>
+        <p class="sm-stat__meta">Across the latest {{ items | length }}</p>
+      </article>
+      <article class="sm-stat">
+        <p class="sm-stat__label">Most recent</p>
+        <p class="sm-stat__value sm-stat__value--text">{{ items[0].record.role_label }}</p>
+        <p class="sm-stat__meta">{{ items[0].record.created_at | short_date }}</p>
+      </article>
+    </section>
+
+    <section class="sm-card" id="history-trend-card" hidden aria-labelledby="history-trend-heading">
+      <div class="sm-card__head">
+        <div>
+          <h2 id="history-trend-heading">Match score over time</h2>
+          <p class="sm-card__sub">Your recent scored analyses, oldest to newest.</p>
+        </div>
+      </div>
+      <div id="history-trend-root"></div>
+    </section>
+
+    <section class="sm-card sm-table-card" aria-labelledby="saved-heading">
+      <div class="sm-card__head sm-card__head--padded">
+        <div>
+          <h2 id="saved-heading">Saved analyses</h2>
+          <p class="sm-card__sub">Showing {{ items | length }} of {{ total }}{% if total > items | length %} most recent{% endif %}.</p>
+        </div>
+      </div>
+      <div class="sm-table-wrap">
+        <table class="sm-table">
+          <caption class="sm-visually-hidden">Saved analyses</caption>
+          <thead>
+            <tr>
+              <th scope="col">Role</th>
+              <th scope="col">Match</th>
+              <th scope="col" class="sm-table__num">Gaps</th>
+              <th scope="col">Status</th>
+              <th scope="col">When</th>
+              <th scope="col"><span class="sm-visually-hidden">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr data-analysis-row="{{ item.record.id }}">
+                <th scope="row">
+                  <a class="sm-table__primary" href="/?analysis={{ item.record.id }}">{{ item.record.role_label }}</a>
+                  <span class="sm-table__secondary">{% if item.record.jd_company %}{{ item.record.jd_company }}{% else %}No company given{% endif %}{% if item.top_gap %} · top gap: {{ item.top_gap }}{% endif %}</span>
+                </th>
+                <td>
+                  {% if item.record.match_score is not none %}
+                    <span class="sm-score-chip{% if item.record.match_band %} sm-score-chip--{{ item.record.match_band }}{% endif %}">{{ item.record.match_score }}</span>
+                    <span class="sm-table__secondary">{{ item.band_label }}</span>
+                  {% else %}
+                    <span class="sm-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="sm-table__num">{{ item.gap_count }}</td>
+                <td>
+                  <span class="sm-status sm-status--{{ item.record.status }}">
+                    {{ status_labels.get(item.record.status, item.record.status) }}
+                  </span>
+                </td>
+                <td><time datetime="{{ item.record.created_at }}">{{ item.record.created_at | short_date }}</time></td>
+                <td class="sm-table__actions">
+                  <a class="sm-button sm-button--secondary sm-button--small" href="/?analysis={{ item.record.id }}">Open</a>
+                  <button type="button" class="sm-button sm-button--ghost sm-button--small sm-danger"
+                          data-delete-analysis="{{ item.record.id }}" data-role-label="{{ item.record.role_label }}">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <ul class="sm-history-list" aria-label="Saved analyses">
+        {% for item in items %}
+          <li class="sm-history-card" data-analysis-row="{{ item.record.id }}">
+            <div class="sm-history-card__head">
+              <div class="sm-history-card__role">
+                <a href="/?analysis={{ item.record.id }}">{{ item.record.role_label }}</a>
+                <span class="sm-history-card__meta">
+                  {% if item.record.jd_company %}{{ item.record.jd_company }}{% else %}No company given{% endif %}{% if item.top_gap %} · top gap: {{ item.top_gap }}{% endif %}
+                </span>
+              </div>
+              <span class="sm-status sm-status--{{ item.record.status }}">
+                {{ status_labels.get(item.record.status, item.record.status) }}
+              </span>
+            </div>
+            <div class="sm-history-card__mid">
+              {% if item.record.match_score is not none %}
+                <span class="sm-score-chip{% if item.record.match_band %} sm-score-chip--{{ item.record.match_band }}{% endif %}">{{ item.record.match_score }}</span>
+                <span>{{ item.band_label }}</span>
+              {% else %}
+                <span>Not scored</span>
+              {% endif %}
+              <span>·</span>
+              <span>{{ item.gap_count }} gap{{ '' if item.gap_count == 1 else 's' }}</span>
+              <time datetime="{{ item.record.created_at }}">{{ item.record.created_at | short_date }}</time>
+            </div>
+            <div class="sm-history-card__actions">
+              <a class="sm-button sm-button--secondary sm-button--small" href="/?analysis={{ item.record.id }}">Open</a>
+              <button type="button" class="sm-button sm-button--ghost sm-button--small sm-danger"
+                      data-delete-analysis="{{ item.record.id }}" data-role-label="{{ item.record.role_label }}">
+                Delete
+              </button>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% else %}
+    <div class="sm-empty">
+      <h2>No analyses yet</h2>
+      <p class="sm-muted">Run your first one — paste a resume and a job description to get a score, a prioritised gap list, and a week-by-week plan.</p>
+      <p><a class="sm-button sm-button--primary" href="/">Start an analysis</a></p>
+    </div>
+  {% endif %}
+
+  <p class="sm-muted sm-fineprint">
+    Analyses are stored in a local SQLite database. Deleting one removes its resume, job description, score, and roadmap from this machine.
+  </p>
+</section>
+{% endblock %}
